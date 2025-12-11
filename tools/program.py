@@ -121,6 +121,7 @@ def check_device(
     use_npu=False,
     use_mlu=False,
     use_gcu=False,
+    metax_gpu=False,
     use_iluvatar_gpu=False,
 ):
     """
@@ -138,9 +139,12 @@ def check_device(
     try:
         if use_gpu and use_xpu:
             print("use_xpu and use_gpu can not both be true.")
+        if metax_gpu and not paddle.device.is_compiled_with_custom_device("metax_gpu"):
+            print(err.format("metax_gpu", "metax_gpu", "metax_gpu", "metax_gpu"))
+            sys.exit(1)
         if use_gpu and not paddle.is_compiled_with_cuda():
             print(err.format("use_gpu", "cuda", "gpu", "use_gpu"))
-           # sys.exit(1)
+            sys.exit(1)
         if use_xpu and not paddle.device.is_compiled_with_xpu():
             print(err.format("use_xpu", "xpu", "xpu", "use_xpu"))
             sys.exit(1)
@@ -840,6 +844,7 @@ def preprocess(is_train=False):
     use_npu = config["Global"].get("use_npu", False)
     use_mlu = config["Global"].get("use_mlu", False)
     use_gcu = config["Global"].get("use_gcu", False)
+    metax_gpu = config["Global"].get("metax_gpu", False)
     use_iluvatar_gpu = config["Global"].get("use_iluvatar_gpu", False)
 
     alg = config["Architecture"]["algorithm"]
@@ -904,11 +909,13 @@ def preprocess(is_train=False):
         device = "mlu:{0}".format(os.getenv("FLAGS_selected_mlus", 0))
     elif use_gcu:  # Use Enflame GCU(General Compute Unit)
         device = "gcu:{0}".format(os.getenv("FLAGS_selected_gcus", 0))
+    elif metax_gpu:  # Use Enflame GCU(General Compute Unit)
+        device = "metax_gpu:{0}".format(os.getenv("FLAGS_selected_gcus", 0))
     elif use_iluvatar_gpu:
         device = "iluvatar_gpu:{0}".format(dist.ParallelEnv().dev_id)
     else:
-        device = "metax_gpu:{}".format(dist.ParallelEnv().dev_id) if use_gpu else "cpu"
-    check_device(use_gpu, use_xpu, use_npu, use_mlu, use_gcu, use_iluvatar_gpu)
+        device = "gpu:{}".format(dist.ParallelEnv().dev_id) if use_gpu else "cpu"
+    check_device(use_gpu, use_xpu, use_npu, use_mlu, use_gcu, metax_gpu, use_iluvatar_gpu)
 
     device = paddle.set_device(device)
 
